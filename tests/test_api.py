@@ -15,6 +15,7 @@ class APITests(unittest.TestCase):
         self.audio=audio.getvalue()
     def test_auth(self):
         self.assertEqual(self.client.get('/api/recordings').status_code,401)
+        self.assertEqual(self.client.get('/api/recordings',headers={b'Authorization':b'Bearer caf\xe9'}).status_code,401)
         self.assertEqual(self.client.post('/api/recordings?name=a',content=self.audio).status_code,401)
     def test_upload_search_dedup_range(self):
         ids=[]

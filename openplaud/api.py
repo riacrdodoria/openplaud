@@ -21,7 +21,7 @@ def create_app(root,token):
     library=Library(root)
     app=FastAPI(docs_url=None,redoc_url=None,openapi_url=None)
     def auth(authorization: str=Header(default='')):
-        if not hmac.compare_digest(authorization,'Bearer '+token):raise HTTPException(401,'Unauthorized')
+        if not hmac.compare_digest(authorization.encode(),('Bearer '+token).encode()):raise HTTPException(401,'Unauthorized')
     @app.middleware('http')
     async def headers(request,call_next):
         if request.headers.get('sec-fetch-site')=='cross-site':

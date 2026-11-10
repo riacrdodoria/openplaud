@@ -35,7 +35,7 @@ def handler(store, token):
             self.send_header('Content-Security-Policy',"default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; connect-src 'self'; frame-ancestors 'none'; base-uri 'none'")
             self.end_headers(); self.wfile.write(raw)
         def authorized(self):
-            return hmac.compare_digest(self.headers.get('Authorization',''),'Bearer '+token)
+            return hmac.compare_digest(self.headers.get('Authorization','').encode(),('Bearer '+token).encode())
         def do_GET(self):
             if self.path=='/': return self.reply(200,HTML,True)
             if not self.authorized(): return self.reply(401,{'error':'unauthorized'})

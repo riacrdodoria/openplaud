@@ -5,6 +5,7 @@ from pathlib import Path
 import subprocess
 import tempfile
 import unittest
+from types import SimpleNamespace
 from unittest.mock import patch
 from openplaud.control import Store
 from openplaud.runner import tick
@@ -21,7 +22,7 @@ class RunnerTests(unittest.TestCase):
             codex.chmod(0o700)
             store=Store(state/'control.sqlite');store.seed([dict(id='test',title='fixture',phase=0,acceptance=['feature exists'])]);store.control('resume')
             config=dict(subscription_usage_authorized=True,isolated_account_verified=True,max_invocations=10,timeout_seconds=900)
-            with patch.dict(os.environ,{'PATH':str(bin)+os.pathsep+os.environ['PATH']}):
+            with patch.dict(os.environ,{'PATH':str(bin)+os.pathsep+os.environ['PATH']}), patch('openplaud.runner.shutil.disk_usage',return_value=SimpleNamespace(free=20*1024**3)):
                 self.assertTrue(tick(store,repo,state,config))
             snap=store.snapshot();self.assertEqual(snap['tasks'][0]['state'],'REVIEW',snap)
             self.assertEqual(snap['tasks'][0]['attempts'],1)
@@ -29,3 +30,14 @@ class RunnerTests(unittest.TestCase):
             self.assertFalse((repo/'feature.txt').exists())
             self.assertEqual((state/'trees'/'1'/'feature.txt').read_text(),'implemented')
             self.assertIsNone(store.claim())
+
+    def test_low_disk_blocks_before_auth_or_agent(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root=Path(tmp);store=Store(root/'control.sqlite')
+            store.seed([dict(id='disk',title='disk',phase=0,acceptance=['fixture'])]);store.control('resume')
+            config=dict(subscription_usage_authorized=True,isolated_account_verified=True,max_invocations=10)
+            with patch('openplaud.runner.shutil.disk_usage',return_value=SimpleNamespace(free=1024)), patch('openplaud.runner.subprocess.run') as proc:
+                tick(store,root,root,config)
+                proc.assert_not_called()
+            self.assertEqual(store.snapshot()['tasks'][0]['state'],'BLOCKED')
+            self.assertIn('10 GiB',store.snapshot()['tasks'][0]['error'])

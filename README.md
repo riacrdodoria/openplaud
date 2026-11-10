@@ -40,3 +40,7 @@ The usage configuration records the operator's authorization for at most **10 su
 This release is for development. Multi-user auth, PostgreSQL migrations, Redis workers, transcribers, summaries, Calendar, Pixel synchronization, semantic search and PWA remain roadmap work. Neither systemd service has been installed by this change. A real reboot/disconnect test has not been performed. Browser visual/mobile QA has not been performed.
 
 Reviewed task branches are not automatically integrated. Before enabling dependent tasks, inspect and integrate the accepted branch into the development checkout; the executor must remain paused during integration. Do not approve a task as DONE before its changes are integrated and its acceptance evidence has been inspected. Main is never merged automatically.
+
+Provider contracts now enforce per-recording privacy before invocation, reject malformed transcript timestamps and preserve source audio on provider errors. Tests use synthetic providers only; no real transcriber is included yet.
+
+An isolated **development observer** was brought up on the WO4 and its container restart verified; see [runtime validation](docs/RUNTIME_VALIDATION.md). This is distinct from the coding executor and the product API, which are not deployed. Current disk pressure and isolated Codex authentication block unattended coding.

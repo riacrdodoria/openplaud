@@ -22,3 +22,7 @@ Tailscale daemon is active. The Pixel appeared offline in the inventory; device 
 - Tailscale changes require approval. No serve/funnel, firewall or SSH changes were made.
 - Operator authorized subscription-only use, maximum ten 15-minute invocations. No paid API authorization.
 - Actual reboot testing must use a disposable environment. Current tests cover process crash and durable reopen only.
+
+## Later resource recheck
+
+During implementation the same filesystem reported 390 GiB used, 98% utilization and 8.2 GiB available. Cause of the change was not investigated and no existing data was deleted. The executor's 10 GiB minimum-free-space guard blocked a test attempt. Dedicated tests now independently verify the low-space block and simulate sufficient disk for the Git workflow fixture. The production guard was not reduced.

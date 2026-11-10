@@ -25,6 +25,7 @@ class PanelTests(unittest.TestCase):
     def test_auth_control(self):
         self.assertEqual(self.request('/api/state')[0],401)
         self.assertEqual(self.request('/api/state',token='wrong')[0],401)
+        self.assertEqual(self.request('/api/state',token='café')[0],401)
         self.assertEqual(self.request('/api/state',token=self.token)[0],200)
         self.assertEqual(self.request('/api/control',{'action':'resume'},self.token)[0],200)
         self.assertEqual(self.store.snapshot()['mode'],'running')
