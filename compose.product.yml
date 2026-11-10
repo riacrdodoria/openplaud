@@ -21,11 +21,12 @@ x-product: &product
 services:
   api:
     <<: *product
-    command: [python, -m, uvicorn, openplaud.api:factory, --factory, --host, 0.0.0.0, --port, "8767", --no-access-log, --limit-concurrency, "16"]
+    command: [python, -m, uvicorn, openplaud.api:factory, --factory, --host, 0.0.0.0, --port, "8767", --no-access-log, --proxy-headers, --forwarded-allow-ips, "${OPENPLAUD_PROXY_IPS:-127.0.0.1}", --limit-concurrency, "16"]
     env_file: ./state/product.env
     environment:
       OPENPLAUD_DATA: /state
-      OPENPLAUD_ALLOWED_HOSTS: "${OPENPLAUD_BIND_IP:-127.0.0.1},127.0.0.1,localhost"
+      OPENPLAUD_ALLOWED_HOSTS: "${OPENPLAUD_ALLOWED_HOSTS:-127.0.0.1,localhost}"
+      OPENPLAUD_HTTPS_HOSTS: "${OPENPLAUD_HTTPS_HOSTS:-}"
     networks: [private, oauth]
     mem_limit: 384m
     cpus: 0.5

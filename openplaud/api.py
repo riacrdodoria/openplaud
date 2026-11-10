@@ -58,6 +58,9 @@ def create_app(root,token):
     async def headers(request,call_next):
         from fastapi.responses import JSONResponse
         from urllib.parse import urlparse
+        https_hosts={x.strip() for x in os.environ.get('OPENPLAUD_HTTPS_HOSTS','').split(',') if x.strip()}
+        if request.url.hostname in https_hosts and request.url.scheme!='https':
+            return RedirectResponse(str(request.url.replace(scheme='https')),status_code=308)
         origin=request.headers.get('origin')
         oauth_callback=request.method=='GET' and request.url.path=='/oauth/google/callback'
         if not oauth_callback and (request.headers.get('sec-fetch-site')=='cross-site' or (origin and urlparse(origin).netloc!=request.headers.get('host'))):
@@ -74,6 +77,8 @@ def create_app(root,token):
         response.headers['X-Content-Type-Options']='nosniff'
         response.headers['X-Frame-Options']='DENY'
         response.headers['Referrer-Policy']='no-referrer'
+        if request.url.hostname in https_hosts and request.url.scheme=='https':
+            response.headers['Strict-Transport-Security']='max-age=31536000'
         response.headers['Content-Security-Policy']="default-src 'none'; script-src 'self'; style-src 'self'; connect-src 'self'; media-src 'self'; img-src 'self' data:; manifest-src 'self'; worker-src 'self'; frame-ancestors 'none'; base-uri 'none'; form-action 'self'"
         return response
     @app.get('/',response_class=HTMLResponse)
