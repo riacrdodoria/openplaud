@@ -1,0 +1,32 @@
+[Unit]
+Description=OpenPlaud bounded roadmap executor
+After=network-online.target
+Wants=network-online.target
+StartLimitIntervalSec=600
+StartLimitBurst=3
+
+[Service]
+Type=simple
+User=openplaud-dev
+Group=openplaud-dev
+WorkingDirectory=/srv/openplaud/repo
+ExecStart=/srv/openplaud/repo/.venv/bin/python -m openplaud.runner --repo /srv/openplaud/repo --state /var/lib/openplaud-dev --config /etc/openplaud/executor.json
+Restart=on-failure
+RestartSec=30
+TimeoutStopSec=30
+KillMode=control-group
+UMask=0077
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/srv/openplaud /var/lib/openplaud-dev
+Environment=CODEX_HOME=/var/lib/openplaud-dev/codex
+Environment=PATH=/usr/local/bin:/usr/bin:/bin
+MemoryMax=1G
+CPUQuota=100%
+TasksMax=128
+LimitFSIZE=67108864
+
+[Install]
+WantedBy=multi-user.target

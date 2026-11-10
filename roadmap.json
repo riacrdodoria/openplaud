@@ -1,0 +1,408 @@
+[
+  {
+    "id": "P00-01",
+    "title": "Inventariar repositório e host",
+    "phase": 0,
+    "deps": [],
+    "acceptance": [
+      "Documentar arquivos ausentes, recursos e conflitos"
+    ],
+    "max_attempts": 2
+  },
+  {
+    "id": "P00-02",
+    "title": "Registrar arquitetura e riscos",
+    "phase": 0,
+    "deps": [
+      "P00-01"
+    ],
+    "acceptance": [
+      "ADR aprovado e bloqueios explícitos"
+    ],
+    "max_attempts": 2
+  },
+  {
+    "id": "P01-01",
+    "title": "Fila transacional e recuperação",
+    "phase": 1,
+    "deps": [
+      "P00-02"
+    ],
+    "acceptance": [
+      "Concorrência e interrupção testadas"
+    ],
+    "max_attempts": 2
+  },
+  {
+    "id": "P01-02",
+    "title": "Provisionar conta isolada e systemd",
+    "phase": 1,
+    "deps": [
+      "P01-01"
+    ],
+    "acceptance": [
+      "Sem acesso a dados de produção; reinício e limites validados"
+    ],
+    "max_attempts": 2
+  },
+  {
+    "id": "P02-01",
+    "title": "Painel autenticado mobile-first",
+    "phase": 2,
+    "deps": [
+      "P01-02"
+    ],
+    "acceptance": [
+      "401 sem token; controles sem shell; revisão de XSS"
+    ],
+    "max_attempts": 2
+  },
+  {
+    "id": "P02-02",
+    "title": "Aprovações, logs e notificações",
+    "phase": 2,
+    "deps": [
+      "P02-01"
+    ],
+    "acceptance": [
+      "Aprovação vinculada à ação; logs redigidos e limitados; notificação de bloqueio"
+    ],
+    "max_attempts": 2
+  },
+  {
+    "id": "P02-03",
+    "title": "Validar reboot e desconexão",
+    "phase": 2,
+    "deps": [
+      "P02-02"
+    ],
+    "acceptance": [
+      "Teste em VM/container descartável; sem reboot do WO4"
+    ],
+    "max_attempts": 2
+  },
+  {
+    "id": "P03-01",
+    "title": "Domínio de gravações e deduplicação",
+    "phase": 3,
+    "deps": [
+      "P00-02"
+    ],
+    "acceptance": [
+      "SHA-256, limite de tamanho, local-only e jobs atômicos testados"
+    ],
+    "max_attempts": 2
+  },
+  {
+    "id": "P03-02",
+    "title": "API autenticada de upload e biblioteca",
+    "phase": 3,
+    "deps": [
+      "P03-01"
+    ],
+    "acceptance": [
+      "Upload, busca, áudio com Range e rejeição sem token testados"
+    ],
+    "max_attempts": 2
+  },
+  {
+    "id": "P03-03",
+    "title": "PostgreSQL e migrations",
+    "phase": 3,
+    "deps": [
+      "P03-02"
+    ],
+    "acceptance": [
+      "Migração reversível; backup e restore testados"
+    ],
+    "max_attempts": 2
+  },
+  {
+    "id": "P03-04",
+    "title": "Autenticação multiusuário",
+    "phase": 3,
+    "deps": [
+      "P03-03"
+    ],
+    "acceptance": [
+      "Isolamento de dados e autorização de objetos testados"
+    ],
+    "max_attempts": 2
+  },
+  {
+    "id": "P04-01",
+    "title": "Validar exportação no Pixel real",
+    "phase": 4,
+    "deps": [
+      "P00-02"
+    ],
+    "acceptance": [
+      "Caminho acessível e fluxo Recorder documentados sem assumir acesso ao sandbox Android"
+    ],
+    "max_attempts": 2
+  },
+  {
+    "id": "P04-02",
+    "title": "Ingestão por pasta",
+    "phase": 4,
+    "deps": [
+      "P04-01"
+    ],
+    "acceptance": [
+      "Arquivos incompletos ignorados; importação idempotente e limites testados"
+    ],
+    "max_attempts": 2
+  },
+  {
+    "id": "P05-01",
+    "title": "Contrato de provedores e política",
+    "phase": 5,
+    "deps": [
+      "P00-02"
+    ],
+    "acceptance": [
+      "local-only recusa envio externo; timeout preserva áudio"
+    ],
+    "max_attempts": 2
+  },
+  {
+    "id": "P05-02",
+    "title": "Worker local PT e EN",
+    "phase": 5,
+    "deps": [
+      "P05-01"
+    ],
+    "acceptance": [
+      "Fixture real com timestamps; processamento assíncrono recuperável"
+    ],
+    "max_attempts": 2
+  },
+  {
+    "id": "P05-03",
+    "title": "Diarização opcional",
+    "phase": 5,
+    "deps": [
+      "P05-02"
+    ],
+    "acceptance": [
+      "Falha não perde transcrição; consentimento e licença verificados"
+    ],
+    "max_attempts": 2
+  },
+  {
+    "id": "P06-01",
+    "title": "Resumos e decisões com evidência",
+    "phase": 6,
+    "deps": [
+      "P05-03"
+    ],
+    "acceptance": [
+      "Saída estruturada validada; evidência referencia segmento existente"
+    ],
+    "max_attempts": 2
+  },
+  {
+    "id": "P06-02",
+    "title": "Tarefas e responsáveis revisáveis",
+    "phase": 6,
+    "deps": [
+      "P06-01"
+    ],
+    "acceptance": [
+      "Sugestões editáveis; falha do modelo preserva dados"
+    ],
+    "max_attempts": 2
+  },
+  {
+    "id": "P07-01",
+    "title": "Biblioteca e player",
+    "phase": 7,
+    "deps": [
+      "P06-02"
+    ],
+    "acceptance": [
+      "Upload e busca em celular; player e Range testados"
+    ],
+    "max_attempts": 2
+  },
+  {
+    "id": "P07-02",
+    "title": "Transcrição sincronizada",
+    "phase": 7,
+    "deps": [
+      "P07-01"
+    ],
+    "acceptance": [
+      "Clique busca timestamp; realce acompanha áudio"
+    ],
+    "max_attempts": 2
+  },
+  {
+    "id": "P07-03",
+    "title": "PWA",
+    "phase": 7,
+    "deps": [
+      "P07-02"
+    ],
+    "acceptance": [
+      "Manifesto e instalação testados; cache não armazena dados privados"
+    ],
+    "max_attempts": 2
+  },
+  {
+    "id": "P08-01",
+    "title": "OAuth read-only multi-conta",
+    "phase": 8,
+    "deps": [
+      "P00-02"
+    ],
+    "acceptance": [
+      "Tokens cifrados; revogação e isolamento testados"
+    ],
+    "max_attempts": 2
+  },
+  {
+    "id": "P08-02",
+    "title": "Associação contextual",
+    "phase": 8,
+    "deps": [
+      "P08-01"
+    ],
+    "acceptance": [
+      "Matches sugeridos e revisáveis; timezone testado"
+    ],
+    "max_attempts": 2
+  },
+  {
+    "id": "P09-01",
+    "title": "Coletor opt-in Android",
+    "phase": 9,
+    "deps": [
+      "P00-02"
+    ],
+    "acceptance": [
+      "Consentimento revogável; precisão e retenção configuráveis"
+    ],
+    "max_attempts": 2
+  },
+  {
+    "id": "P09-02",
+    "title": "Contexto de locais",
+    "phase": 9,
+    "deps": [
+      "P09-01"
+    ],
+    "acceptance": [
+      "Sugestão revisável; exclusão remove amostras expiradas"
+    ],
+    "max_attempts": 2
+  },
+  {
+    "id": "P10-01",
+    "title": "Busca semântica pgvector",
+    "phase": 10,
+    "deps": [
+      "P09-02"
+    ],
+    "acceptance": [
+      "Proveniência, isolamento e remoção de embeddings testados"
+    ],
+    "max_attempts": 2
+  },
+  {
+    "id": "P10-02",
+    "title": "Chat com gravações",
+    "phase": 10,
+    "deps": [
+      "P10-01"
+    ],
+    "acceptance": [
+      "Citações verificáveis; política por gravação; memória longitudinal com origem"
+    ],
+    "max_attempts": 2
+  },
+  {
+    "id": "P11-01",
+    "title": "Webhooks n8n",
+    "phase": 11,
+    "deps": [
+      "P10-02"
+    ],
+    "acceptance": [
+      "Assinatura, idempotência e retry limitado testados"
+    ],
+    "max_attempts": 2
+  },
+  {
+    "id": "P11-02",
+    "title": "Slack e Pipedrive opcionais",
+    "phase": 11,
+    "deps": [
+      "P11-01"
+    ],
+    "acceptance": [
+      "Sem envio sem autorização; mocks de APIs"
+    ],
+    "max_attempts": 2
+  },
+  {
+    "id": "P12-01",
+    "title": "E2E e segurança",
+    "phase": 12,
+    "deps": [
+      "P11-02"
+    ],
+    "acceptance": [
+      "Fluxo completo com áudio sintético; autenticação e privacidade testadas"
+    ],
+    "max_attempts": 2
+  },
+  {
+    "id": "P12-02",
+    "title": "Backups e restauração",
+    "phase": 12,
+    "deps": [
+      "P12-01"
+    ],
+    "acceptance": [
+      "Restauração em ambiente vazio com checksums conferidos"
+    ],
+    "max_attempts": 2
+  },
+  {
+    "id": "P12-03",
+    "title": "Auditoria de licenças e dependências",
+    "phase": 12,
+    "deps": [
+      "P00-02"
+    ],
+    "acceptance": [
+      "SBOM e licenças revisadas; nenhuma cópia sem licença"
+    ],
+    "max_attempts": 2
+  },
+  {
+    "id": "P13-01",
+    "title": "Preparar release e rollback",
+    "phase": 13,
+    "deps": [
+      "P12-03"
+    ],
+    "acceptance": [
+      "Guia operacional, smoke tests e rollback reproduzíveis"
+    ],
+    "max_attempts": 2
+  },
+  {
+    "id": "P13-02",
+    "title": "Aprovar e implantar produção",
+    "phase": 13,
+    "deps": [
+      "P13-01"
+    ],
+    "acceptance": [
+      "Aprovação explícita vinculada à versão; validação de saúde"
+    ],
+    "max_attempts": 2
+  }
+]
