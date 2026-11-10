@@ -1,0 +1,4 @@
+# Optional host-side login helper; Chrome must already be installed.
+-r requirements.lock
+playwright==1.65.0
+greenlet==3.5.6

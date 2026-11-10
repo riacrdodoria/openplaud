@@ -2,6 +2,10 @@
 
 MVP self-hosted para transformar áudios em transcrições, resumos e próximos passos. Desenvolvimento conduzido neste chat, diretamente no WO4; o executor autônomo de desenvolvimento foi descontinuado por decisão do usuário.
 
+## Google Recorder na nuvem
+
+O usuário escolheu sincronizar o backup do Recorder pela CLI, em vez de parear diretamente o Pixel. O conector próprio está preparado; a autenticação e primeira importação reais precisam ser concluídas antes de habilitar o timer. Veja a [revisão dos projetos e configuração](docs/GOOGLE_RECORDER_REVIEW.md).
+
 ## O que está implementado
 
 - Upload manual de WAV, MP3, M4A, Ogg, FLAC e WebM, até 100 MiB por arquivo; deduplicação SHA-256.
