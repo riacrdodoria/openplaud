@@ -20,6 +20,8 @@ class WhisperProvider:
     external=False
     def __init__(self,model_path):self.model_path=model_path
     def transcribe(self,audio,language):
+        import onnxruntime
+        onnxruntime.disable_telemetry_events()
         from faster_whisper import WhisperModel
         # Offline only: provisioning is a separate deliberate operation.
         model=WhisperModel(str(self.model_path),device='cpu',compute_type='int8',cpu_threads=2,num_workers=1,local_files_only=True)

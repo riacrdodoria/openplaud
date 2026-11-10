@@ -59,7 +59,8 @@ def create_app(root,token):
         from fastapi.responses import JSONResponse
         from urllib.parse import urlparse
         origin=request.headers.get('origin')
-        if request.headers.get('sec-fetch-site')=='cross-site' or (origin and urlparse(origin).netloc!=request.headers.get('host')):
+        oauth_callback=request.method=='GET' and request.url.path=='/oauth/google/callback'
+        if not oauth_callback and (request.headers.get('sec-fetch-site')=='cross-site' or (origin and urlparse(origin).netloc!=request.headers.get('host'))):
             return JSONResponse({'detail':'Cross-site request denied'},status_code=403)
         if request.method in ('POST','PATCH','PUT') and request.url.path!='/api/recordings':
             # Enforce limits even before JSON/Pydantic parses an untrusted body.
@@ -119,8 +120,9 @@ def create_app(root,token):
     def recording(key:str):return detail(key)
     @app.patch('/api/recordings/{key}',dependencies=[Depends(auth)])
     def annotation(key:str,data:Annotation):
-        detail(key)
-        try:library.annotate(key,data.started_at,data.notes)
+        previous=detail(key)
+        fields=data.model_dump(exclude_unset=True)
+        try:library.annotate(key,fields.get('started_at',previous.get('started_at')),fields.get('notes',previous.get('notes') or ''))
         except ValueError as e:raise HTTPException(422,str(e)) from e
         from .calendar import match
         match(library,key);return detail(key)
@@ -198,6 +200,8 @@ def create_app(root,token):
         return detail(key)
     from .http_limits import JSONBodyLimit
     app.add_middleware(JSONBodyLimit)
+    from starlette.middleware.trustedhost import TrustedHostMiddleware
+    app.add_middleware(TrustedHostMiddleware,allowed_hosts=os.environ.get('OPENPLAUD_ALLOWED_HOSTS','127.0.0.1,localhost,testserver').split(','))
     return app
 
 def factory():return create_app(Path(os.environ.get('OPENPLAUD_DATA','state/library')),os.environ.get('OPENPLAUD_API_TOKEN',''))

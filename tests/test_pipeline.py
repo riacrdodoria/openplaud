@@ -82,6 +82,8 @@ class PipelineTests(unittest.TestCase):
         matches=match(self.lib,self.key);self.assertEqual(len(matches),1);self.assertEqual(matches[0]['state'],'SUGGESTED')
         review(self.lib,self.key,matches[0]['id'],'REJECTED');match(self.lib,self.key)
         self.assertEqual(self.lib.detail(self.key)['calendar_matches'][0]['state'],'REJECTED')
+        self.lib.annotate(self.key,'2026-11-12T12:05:00-03:00','fixture');match(self.lib,self.key)
+        self.assertEqual(self.lib.detail(self.key)['calendar_matches'][0]['state'],'REJECTED')
         with self.assertRaises(ValueError):self.lib.annotate(self.key,'2026-11-10T12:05:00')
     def test_invalid_llm_citation_falls_back(self):
         segments=[dict(index=0,start_ms=0,end_ms=1000,text='Literal evidence.')]
@@ -101,3 +103,14 @@ class OAuthTests(unittest.TestCase):
             self.assertNotIn(b'synthetic-refresh',encrypted)
             with self.assertRaises(ValueError):g.callback(query['state'][0],'fixture-code')
             self.assertEqual(g.connections()[0]['account'],'fixture-account')
+
+class SummaryCoverageTests(unittest.TestCase):
+    def test_chunked_summary_preserves_global_evidence_indices(self):
+        segments=[{'index':i,'start_ms':i*1000,'end_ms':i*1000+900,'text':('Palavras sintéticas de teste. '*100)} for i in range(7)]
+        def generated(prompt,timeout,indices):
+            return {'highlights':[{'text':'Resumo sintético','segment_index':indices[-1]}],'decisions':[],'action_items':[]}
+        with patch.dict(os.environ,{'OPENPLAUD_OLLAMA_URL':'http://127.0.0.1:11434'}),patch('openplaud.llm.generate',side_effect=generated) as gen:
+            result=summarize(segments)
+        self.assertGreater(gen.call_count,1);self.assertEqual(result['coverage'],'full')
+        self.assertEqual(result['highlights'][-1]['segment_index'],6)
+        self.assertTrue(all(x['segment_index'] in range(7) for x in result['highlights']))

@@ -39,7 +39,9 @@ def import_ics(library,content,account):
 
 def match(library,key):
     detail=library.detail(key)
-    if not detail or not detail.get('started_at'):return []
+    if not detail:return []
+    with library.connect() as c:c.execute("DELETE FROM calendar_matches WHERE recording_id=? AND state='SUGGESTED'",(key,))
+    if not detail.get('started_at'):return library.detail(key)['calendar_matches']
     start=aware(detail['started_at']);segments=(detail.get('transcript') or {}).get('segments',[])
     end=start+timedelta(milliseconds=segments[-1]['end_ms'] if segments else 0)
     with library.connect() as c:

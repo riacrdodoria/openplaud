@@ -2,6 +2,7 @@ import io
 from pathlib import Path
 import tempfile
 import unittest
+from unittest.mock import patch
 import wave
 from fastapi.testclient import TestClient
 from openplaud.api import create_app
@@ -54,7 +55,10 @@ class MVPAPITests(unittest.TestCase):
         self.assertIn("script-src 'self'",self.client.get('/').headers['content-security-policy'])
         self.assertEqual(self.client.get('/assets/secrets.env').status_code,404)
         self.assertEqual(self.client.post('/api/calendar/google/connect?account=fixture',headers=self.header).status_code,409)
-        self.assertEqual(self.client.get('/oauth/google/callback?state=bad&code=bad').status_code,400)
+        self.assertEqual(self.client.get('/oauth/google/callback?state=bad&code=bad',headers={'Sec-Fetch-Site':'cross-site'}).status_code,400)
+        with patch('openplaud.google_calendar.GoogleCalendar.callback',return_value='fixture'):
+            self.assertEqual(self.client.get('/oauth/google/callback?state=fixture&code=fixture',headers={'Sec-Fetch-Site':'cross-site'},follow_redirects=False).status_code,303)
+        self.assertEqual(self.client.get('/',headers={'Host':'untrusted.example'}).status_code,400)
 
     def test_chunked_json_limit(self):
         def stream():
