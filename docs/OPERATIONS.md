@@ -1,3 +1,5 @@
+> Histórico do controle de desenvolvimento. Para o produto atual, siga [MVP_OPERATIONS.md](MVP_OPERATIONS.md). A execução autônoma de código foi descontinuada a pedido do usuário.
+
 # Operations and remaining installation gate
 
 ## Before activation

@@ -1,46 +1,50 @@
 # OpenPlaud
 
-Private, self-hosted audio intelligence, starting with recordings exported from Pixel Recorder.
+MVP self-hosted para transformar áudios em transcrições, resumos e próximos passos. Desenvolvimento conduzido neste chat, diretamente no WO4; o executor autônomo de desenvolvimento foi descontinuado por decisão do usuário.
 
-**Status: development foundation, not a complete MVP or production installation.**
+## O que está implementado
 
-Implemented: durable development roadmap, authenticated private control panel, bounded Codex adapter, recovery records and isolated Git attempts; audio upload API, hash deduplication, local-only storage, filename search and HTTP Range playback. Audio jobs are queued but transcription is not configured. No paid AI calls are made by the application.
+- Upload manual de WAV, MP3, M4A, Ogg, FLAC e WebM, até 100 MiB por arquivo; deduplicação SHA-256.
+- Importação automática de uma pasta local, ignorando arquivos recentes/incompletos e links simbólicos. O fluxo real de exportação do Pixel precisa ser validado no aparelho.
+- Worker persistente com estados, tentativas limitadas, recuperação de interrupções e preservação de resultados.
+- Transcrição local PT/EN com faster-whisper small em CPU int8; modelo provisionado separadamente, sem download ou envio de áudio durante a execução.
+- Resumos por Qwen2.5 1.5B local, decisões/tarefas com evidências e timestamps, fallback extrativo explícito. Responsáveis e prazos são informados/revisados pelo usuário.
+- Biblioteca responsiva, player, destaque sincronizado da transcrição, busca por título/conteúdo e exportação TXT, JSON e VTT.
+- Consulta em uma ou várias gravações com trechos citados. A consulta atual usa busca textual; não é chat generativo nem memória semântica.
+- Importação de múltiplas agendas .ics; integração Google OAuth somente de leitura, com PKCE e tokens cifrados, pronta para configuração da conta. Associações são sugestões confirmáveis/rejeitáveis.
+- Autenticação de usuário único, sessões HttpOnly, limites de entrada, backups verificáveis e acesso privado por Tailscale.
 
-Read [product brief](docs/PRODUCT_BRIEF.md), [architecture](docs/ARCHITECTURE.md), [discovery](docs/DISCOVERY.md), [control-plane ADR](docs/adr/0001-control-plane.md) and [operations](docs/OPERATIONS.md).
+## Executar e verificar
 
-## Development
-
-Python 3.12 on Linux:
+Python 3.12, Linux, Docker/Compose. Leia [operação do MVP](docs/MVP_OPERATIONS.md) antes de iniciar no host. A configuração não reutiliza bancos, volumes ou redes de outros serviços.
 
 ```sh
 python3 -m venv .venv
 .venv/bin/pip install -r requirements.lock
 .venv/bin/python -m unittest discover -s tests -v
+node --check openplaud/web/app.js
 ```
 
-Generate separate random tokens of at least 32 characters and inject them through your secret manager or environment. Never put them in Git or command arguments. Set `OPENPLAUD_API_TOKEN` and `OPENPLAUD_PANEL_TOKEN` before launching:
+Provisione o modelo público uma vez, com rede disponível:
 
 ```sh
-.venv/bin/uvicorn openplaud.api:factory --factory --host 127.0.0.1 --port 8767
-python3 -m openplaud.panel --state state --host 127.0.0.1 --port 8766
+.venv/bin/python -m openplaud.provision --model small --destination state/models/whisper-small
 ```
 
-The library UI is on port 8767 and development control on 8766. No public binding. API upload accepts raw bytes with `Content-Type: application/octet-stream` and `POST /api/recordings?name=meeting.wav`. WAV, MP3, M4A, Ogg, FLAC and WebM container signatures are screened; this is not full decoder validation. Maximum 100 MiB/file and a provisional 100-recording UI/API capacity; production quotas and concurrent accounting remain pending. No pagination yet. Tokens stay in page memory; no persistent browser credential storage.
-
-Seed the roadmap without invoking an agent (default is paused):
+Prepare as pastas/segredos conforme o guia e use:
 
 ```sh
-python3 -m openplaud.runner --repo . --state state --config executor.example.json --once
+docker compose --env-file state/product-runtime.env -f compose.product.yml up -d
 ```
 
-The usage configuration records the operator's authorization for at most **10 subscription invocations, 900 seconds each**, with no paid APIs. `isolated_account_verified` stays false until provisioning and isolation tests pass. Start paused; do not set it true just to bypass the provisioning gate.
+O produto usa a porta **8767**, vinculada somente ao endereço privado escolhido. O token e a chave de cifragem ficam em `state/product.env`, fora do Git. Não imprima `docker compose config` sem `--quiet`, pois o comando pode revelar segredos do env_file.
 
-## Boundaries
+## Limites e escopo
 
-This release is for development. Multi-user auth, PostgreSQL migrations, Redis workers, transcribers, summaries, Calendar, Pixel synchronization, semantic search and PWA remain roadmap work. Neither systemd service has been installed by this change. A real reboot/disconnect test has not been performed. Browser visual/mobile QA has not been performed.
+SQLite e um worker único são a implementação inicial deliberada; PostgreSQL/Redis/Next.js permanecem evolução de arquitetura ([ADR](docs/adr/0002-interactive-mvp.md)). Não há inferência paga ou fallback para a nuvem. A transcrição automática pode errar e deve ser revisada. Áudios sem fala ou inválidos falham sem eliminar o original.
 
-Reviewed task branches are not automatically integrated. Before enabling dependent tasks, inspect and integrate the accepted branch into the development checkout; the executor must remain paused during integration. Do not approve a task as DONE before its changes are integrated and its acceptance evidence has been inspected. Main is never merged automatically.
+A análise local é limitada a oito blocos e oito minutos de geração por gravação; resumos parciais são sinalizados. Cada tentativa de processamento tem limite de 30 minutos; no máximo três tentativas. Não há garantia de tempo real nem validação de qualidade em reuniões reais longas. O worker pausa com menos de 2 GiB de disco livre.
 
-Provider contracts now enforce per-recording privacy before invocation, reject malformed transcript timestamps and preserve source audio on provider errors. Tests use synthetic providers only; no real transcriber is included yet.
+OAuth real depende de credenciais e autorização do titular da agenda; nenhum acesso foi simulado como conectado. Pixel/Syncthing precisa de validação no aparelho. Diarização, reconhecimento de vozes, localização Android, integrações CRM, embeddings e chat generativo não fazem parte desta entrega. O manifesto permite modo standalone em contexto seguro; instalação PWA/HTTPS e QA visual mobile ainda precisam ser validados. Nenhum áudio privado é colocado em cache offline.
 
-An isolated **development observer** was brought up on the WO4 and its container restart verified; see [runtime validation](docs/RUNTIME_VALIDATION.md). This is distinct from the coding executor and the product API, which are not deployed. Current disk pressure and isolated Codex authentication block unattended coding.
+Veja [critérios e evidências](docs/MVP_ACCEPTANCE.md), [arquitetura](docs/ARCHITECTURE.md), [referências e licenças](docs/OPEN_SOURCE_REVIEW.md). A infraestrutura de controle de desenvolvimento anterior é histórica e não é necessária para usar o produto.

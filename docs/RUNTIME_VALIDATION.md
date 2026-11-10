@@ -1,3 +1,5 @@
+> Registro histórico do observador inicial. Para o produto atual, consulte [MVP_ACCEPTANCE.md](MVP_ACCEPTANCE.md) e [MVP_OPERATIONS.md](MVP_OPERATIONS.md). O observador foi parado a pedido do usuário de desenvolver interativamente.
+
 # Development observer validation
 
 2026-11-10, WO4. Not a production release or full-roadmap completion.
