@@ -2,3 +2,6 @@
 !openplaud/
 !openplaud/*.py
 !roadmap.json
+!openplaud/web/
+!openplaud/web/*
+!requirements.lock
