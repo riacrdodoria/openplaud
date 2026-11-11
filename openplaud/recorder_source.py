@@ -28,6 +28,7 @@ from cryptography.fernet import Fernet
 ORIGIN='https://recorder.google.com'
 RPC='https://pixelrecorder-pa.clients6.google.com/$rpc/java.com.google.wireless.android.pixel.recorder.protos.PlaybackService/GetRecordingList'
 AUDIO='https://usercontent.recorder.google.com/download/playback/'
+LIST_LIMIT=100
 MAX_AUDIO=100*1024**2
 
 class SourceError(Exception):pass
@@ -42,7 +43,9 @@ class CloudRecording:
 
 
 def parse_recordings(data):
-    if not isinstance(data,list) or not data or data[0] is not None and not isinstance(data[0],list):
+    if data == []:
+        return [],False
+    if not isinstance(data,list) or data[0] is not None and not isinstance(data[0],list):
         raise SourceError('UNEXPECTED_LIST_SCHEMA')
     records=[]
     for item in data[0] or []:
@@ -53,7 +56,14 @@ def parse_recordings(data):
             records.append(CloudRecording(identifier,title[:240],moment.isoformat(),int(item[3][0])))
         except (ValueError,TypeError,IndexError,OverflowError):continue
     if data[0] and not records:raise SourceError('UNEXPECTED_RECORD_METADATA')
-    return records,bool(len(data)>1 and data[1])
+    # The live endpoint returns integer 1 for both full and short pages.
+    # Keep reporting possible truncation for a full page or unknown metadata.
+    metadata=data[1:]
+    known_metadata=not metadata or metadata==[None] or (
+        len(metadata)==1 and type(metadata[0]) is int and metadata[0]==1
+    )
+    partial=len(data[0] or [])>=LIST_LIMIT or not known_metadata or len(records)!=len(data[0] or [])
+    return records,partial
 
 
 class State:
@@ -126,7 +136,7 @@ class RecorderCloud:
     def list(self):
         auth=self.credentials;stamp=int(time.time())
         digest=hashlib.sha1(f"{stamp} {auth['sapisid']} {ORIGIN}".encode()).hexdigest()
-        req=urllib.request.Request(RPC,data=json.dumps([[{'1':stamp}],100]).encode(),headers={
+        req=urllib.request.Request(RPC,data=json.dumps([[{'1':stamp}],LIST_LIMIT]).encode(),headers={
             'Content-Type':'application/json+protobuf','X-Goog-Api-Key':auth['api_key'],
             'Authorization':f'SAPISIDHASH {stamp}_{digest}','X-Goog-AuthUser':str(auth['authuser']),
             'Origin':ORIGIN,'Referer':ORIGIN+'/','Cookie':auth['rpc_cookies']})
@@ -214,18 +224,43 @@ async def login(state):
     if not chrome:raise SourceError('CHROME_NOT_INSTALLED')
     if not (os.environ.get('DISPLAY') or os.environ.get('WAYLAND_DISPLAY')):raise SourceError('DESKTOP_SESSION_REQUIRED')
     profile=state.path/'chrome-profile';profile.mkdir(exist_ok=True,mode=0o700)
-    active=profile/'DevToolsActivePort';active.unlink(missing_ok=True)
-    proc=subprocess.Popen([chrome,'--user-data-dir='+str(profile.resolve()),'--remote-debugging-address=127.0.0.1','--remote-debugging-port=0','--no-first-run',ORIGIN],stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL,start_new_session=True)
+    active=profile/'DevToolsActivePort'
+    startup_log=state.path/'chrome-startup.log'
+    def existing_endpoint():
+        candidates=[]
+        if active.is_file():
+            with contextlib.suppress(Exception):
+                lines=active.read_text().splitlines()
+                candidates.append('ws://127.0.0.1:'+str(int(lines[0]))+lines[1])
+        if startup_log.is_file():
+            candidates.extend(re.findall(r'DevTools listening on (ws://127\.0\.0\.1:\d+/devtools/browser/[\w-]+)',startup_log.read_text(errors='replace'))[-1:])
+        opener=urllib.request.build_opener(urllib.request.ProxyHandler({}))
+        for candidate in candidates:
+            target=urlparse(candidate)
+            if target.scheme!='ws' or target.hostname!='127.0.0.1' or target.username or not re.fullmatch('/devtools/browser/[\w-]+',target.path):continue
+            try:
+                with opener.open('http://127.0.0.1:'+str(target.port)+'/json/version',timeout=2) as response:info=json.load(response)
+                if info.get('webSocketDebuggerUrl')==candidate:return candidate
+            except Exception:continue
+        return None
+    endpoint=existing_endpoint();proc=None
+    if not endpoint:
+        active.unlink(missing_ok=True)
+        fd=os.open(startup_log,os.O_WRONLY|os.O_CREAT|os.O_TRUNC,0o600)
+        with os.fdopen(fd,'wb') as errors:
+            proc=subprocess.Popen([chrome,'--user-data-dir='+str(profile.resolve()),'--remote-debugging-address=127.0.0.1','--remote-debugging-port=0','--no-first-run',ORIGIN],stdout=subprocess.DEVNULL,stderr=errors,start_new_session=True)
     browser=None
     try:
         for _ in range(100):
-            if proc.poll() is not None:raise SourceError('CHROME_START_FAILED')
-            if active.is_file():break
-            await asyncio.sleep(.1)
-        else:raise SourceError('CHROME_START_TIMEOUT')
-        port=int(active.read_text().splitlines()[0])
+            if endpoint:break
+            if proc and proc.poll() is not None:raise SourceError('CHROME_START_FAILED')
+            endpoint=existing_endpoint()
+            if not endpoint:await asyncio.sleep(.1)
+        if not endpoint:raise SourceError('CHROME_START_TIMEOUT')
         async with async_playwright() as playwright:
-            browser=await playwright.chromium.connect_over_cdp('http://127.0.0.1:'+str(port))
+            print('Connecting to the dedicated local Chrome profile...',flush=True)
+            try:browser=await playwright.chromium.connect_over_cdp(endpoint,timeout=30000)
+            except Exception as error:raise SourceError('CHROME_CONNECTION_FAILED') from error
             context=browser.contexts[0];page=context.pages[0] if context.pages else await context.new_page()
             future=asyncio.get_running_loop().create_future()
             async def capture(response):
@@ -253,7 +288,9 @@ async def login(state):
                 except Exception as e:
                     if not future.done():future.set_exception(SourceError(type(e).__name__))
             page.on('response',capture)
-            await page.goto(ORIGIN,wait_until='domcontentloaded',timeout=60000)
+            print('Opening Google Recorder; complete sign-in in this window.',flush=True)
+            try:await page.goto(ORIGIN,wait_until='commit',timeout=30000)
+            except Exception:pass  # User may continue navigation while sign-in redirects load.
             await page.bring_to_front()
             print('Complete the Google login in the dedicated Chrome window. Maximum wait: 10 minutes.',flush=True)
             await asyncio.wait_for(future,600)
@@ -261,7 +298,7 @@ async def login(state):
     finally:
         if browser:
             with contextlib.suppress(Exception):await browser.close()
-        if proc.poll() is None:
+        if proc and proc.poll() is None:
             proc.terminate()
             try:proc.wait(5)
             except subprocess.TimeoutExpired:proc.kill();proc.wait()

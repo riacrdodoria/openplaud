@@ -21,6 +21,16 @@ class RecorderSourceTests(unittest.TestCase):
         with self.assertRaises(SourceError):parse_recordings({'unexpected':'schema'})
         broken=list(item);broken[13]='../../outside'
         with self.assertRaises(SourceError):parse_recordings([[broken]])
+    def test_observed_short_full_and_empty_recorder_pages(self):
+        item=[None]*14
+        item[13]=ID
+        item[2]=['1762804800',0]
+        item[3]=['20',0]
+        self.assertEqual(parse_recordings([]),([],False))
+        self.assertFalse(parse_recordings([[item],1])[1])
+        self.assertTrue(parse_recordings([[item]*100,1])[1])
+        self.assertTrue(parse_recordings([[item,[]],1])[1])
+
     def test_encrypted_session_and_missing_login(self):
         with tempfile.TemporaryDirectory() as root:
             s=State(root)
