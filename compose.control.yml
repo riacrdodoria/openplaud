@@ -1,0 +1,36 @@
+name: openplaud-dev
+x-control: &control
+  image: openplaud-control:dev
+  build:
+    context: .
+    dockerfile: Dockerfile.control
+  user: "10001:10001"
+  read_only: true
+  restart: unless-stopped
+  init: true
+  cap_drop: [ALL]
+  security_opt: [no-new-privileges:true]
+  pids_limit: 32
+  mem_limit: 128m
+  cpus: 0.25
+  tmpfs: ["/tmp:size=16m,mode=1777"]
+  volumes:
+    - ./state/control:/state
+  logging:
+    driver: json-file
+    options:
+      max-size: 5m
+      max-file: "2"
+services:
+  panel:
+    <<: *control
+    command: [python, -m, openplaud.panel, --state, /state, --host, 0.0.0.0, --port, "8766"]
+    env_file: ./state/panel.env
+    environment:
+      OPENPLAUD_CONTAINER_LISTENER: "1"
+    ports:
+      - "${OPENPLAUD_BIND_IP:-127.0.0.1}:8766:8766"
+  executor:
+    <<: *control
+    command: [python, -m, openplaud.runner, --repo, /app, --state, /state, --config, /state/executor.json]
+    network_mode: none

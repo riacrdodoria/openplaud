@@ -7,7 +7,7 @@ Plataforma self-hosted de inteligência de áudio para importar gravações do G
 Trycoo WO4, Ryzen 9 6900HX, 16 GB RAM, SSD 512 GB, Ubuntu 24.04, Docker e Tailscale. Reutilizar serviços existentes somente após inventário não destrutivo.
 
 ## MVP
-1. Importação manual e por pasta sincronizada (Syncthing).
+1. Importação manual e sincronização pela nuvem Google Recorder (CLI no WO4); pasta observada permanece alternativa, sem Syncthing ativo.
 2. Deduplicação SHA-256, armazenamento local e fila de processamento.
 3. Transcrição híbrida: provedor externo opcional ou faster-whisper local.
 4. Resumos e extração estruturada de decisões e tarefas, sempre com evidências/timestamps.
@@ -16,7 +16,7 @@ Trycoo WO4, Ryzen 9 6900HX, 16 GB RAM, SSD 512 GB, Ubuntu 24.04, Docker e Tailsc
 7. Localização opcional via coletor Android, nunca exigida para processamento.
 
 ## Fases posteriores
-Diarização avançada, reconhecimento de vozes com consentimento, RAG multi-gravação, integrações n8n/Pipedrive e múltiplos usuários.
+Diarização local anônima e chat local com citações entre gravações foram implementados incrementalmente; critérios e limitações em SPEAKERS_CHAT_OPERATIONS.md. Reconhecimento de vozes com consentimento, memória semântica, integrações n8n/Pipedrive e múltiplos usuários permanecem posteriores.
 
 ## Requisitos não funcionais
 Privacidade por padrão; controle por gravação sobre envio a APIs externas; autenticação; backups; retenção configurável; observabilidade; testes; execução sem GPU; acesso privado por Tailscale.

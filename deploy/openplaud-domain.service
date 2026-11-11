@@ -1,0 +1,21 @@
+[Unit]
+Description=OpenPlaud conversas HTTPS tunnel
+After=network-online.target
+Wants=network-online.target
+StartLimitIntervalSec=600
+StartLimitBurst=5
+
+[Service]
+Type=simple
+WorkingDirectory=/srv/openplaud
+ExecStart=/usr/local/bin/cloudflared --no-autoupdate --config /srv/openplaud/state/domain/cloudflared.yml tunnel run
+Restart=on-failure
+RestartSec=10
+NoNewPrivileges=true
+UMask=0077
+MemoryMax=160M
+CPUQuota=20%
+TasksMax=64
+
+[Install]
+WantedBy=default.target

@@ -1,0 +1,25 @@
+[Unit]
+Description=OpenPlaud private development control panel
+After=network-online.target
+
+[Service]
+Type=simple
+User=openplaud-dev
+Group=openplaud-dev
+WorkingDirectory=/srv/openplaud/repo
+EnvironmentFile=/etc/openplaud/panel.env
+ExecStart=/usr/bin/python3 -m openplaud.panel --state /var/lib/openplaud-dev --host 127.0.0.1 --port 8766
+Restart=on-failure
+RestartSec=10
+UMask=0077
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/var/lib/openplaud-dev
+MemoryMax=128M
+CPUQuota=20%
+TasksMax=32
+
+[Install]
+WantedBy=multi-user.target

@@ -1,3 +1,5 @@
+> A arquitetura abaixo é a visão de evolução. O MVP de usuário único usa o adaptador SQLite, worker Python único e cliente web responsivo, conforme [ADR 0002](adr/0002-interactive-mvp.md). PostgreSQL/Redis/Next.js não estão implantados.
+
 # Arquitetura
 
 Pixel Recorder -> pasta acessível -> Syncthing (send-only) -> inbox (receive-only) -> ingestor -> arquivo imutável -> fila Redis -> worker -> transcrição -> análise -> PostgreSQL/pgvector -> API FastAPI -> PWA Next.js.

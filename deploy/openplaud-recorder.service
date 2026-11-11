@@ -1,0 +1,19 @@
+[Unit]
+Description=OpenPlaud Google Recorder read-only cloud import
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+WorkingDirectory=/srv/openplaud
+ExecStart=/srv/openplaud/.venv/bin/python -m openplaud.recorder_source sync --state /srv/openplaud/state/google-recorder --api-env /srv/openplaud/state/product.env
+TimeoutStartSec=660
+UMask=0077
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=read-only
+ReadWritePaths=/srv/openplaud/state/google-recorder
+MemoryMax=512M
+CPUQuota=30%
+TasksMax=32
