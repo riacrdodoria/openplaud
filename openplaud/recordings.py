@@ -31,6 +31,7 @@ class Library:
             CREATE VIRTUAL TABLE IF NOT EXISTS segment_search USING fts5(recording_id UNINDEXED,
               segment_index UNINDEXED,text,tokenize='unicode61 remove_diacritics 2');
             CREATE TABLE IF NOT EXISTS inbox_seen(path TEXT PRIMARY KEY,size INTEGER NOT NULL,mtime_ns INTEGER NOT NULL,recording_id TEXT NOT NULL);
+            CREATE TABLE IF NOT EXISTS diarizations(recording_id TEXT PRIMARY KEY,state TEXT NOT NULL,content TEXT,error TEXT,updated REAL NOT NULL);
             CREATE TABLE IF NOT EXISTS schema_migrations(version INTEGER PRIMARY KEY,applied REAL NOT NULL);
             INSERT OR IGNORE INTO schema_migrations VALUES(1,strftime('%s','now'));
             ''')
@@ -90,6 +91,11 @@ class Library:
             result['transcript']={'language':t['language'],'provider':t['provider'],'segments':json.loads(t['segments'])} if t else None
             a=c.execute('SELECT content FROM analyses WHERE recording_id=?',(key,)).fetchone()
             result['analysis']=json.loads(a[0]) if a else None
+            speaker=c.execute('SELECT state,content,error FROM diarizations WHERE recording_id=?',(key,)).fetchone()
+            result['diarization']={'state':speaker['state'],'error':speaker['error'],**(json.loads(speaker['content']) if speaker['content'] else {})} if speaker else {'state':'NOT_REQUESTED'}
+            if speaker and speaker['state']=='DONE' and result['transcript']:
+                from .diarization import assign_speakers
+                result['transcript']['segments']=assign_speakers(result['transcript']['segments'],result['diarization']['turns'])
             result['calendar_matches']=[dict(e) for e in c.execute('''SELECT e.*,m.state,m.score FROM calendar_matches m
             JOIN calendar_events e ON e.id=m.event_id WHERE m.recording_id=? ORDER BY m.score DESC''',(key,))]
             return result
@@ -103,6 +109,7 @@ class Library:
     def recover(self):
         # Only while holding the single worker OS lock; never run from API startup.
         with self.connect() as c:
+            c.execute("UPDATE diarizations SET state='FAILED',error='DIARIZATION_INTERRUPTED' WHERE state='RUNNING'")
             c.execute("UPDATE jobs SET state=CASE WHEN attempts<3 THEN 'QUEUED' ELSE 'FAILED' END,error='Processing interrupted' WHERE state IN ('TRANSCRIBING','ANALYZING')")
     def save_transcript(self,key,transcript):
         from dataclasses import asdict
@@ -162,3 +169,21 @@ class Library:
             if not 0<=index<len(actions):raise ValueError('action unavailable')
             actions[index].update(changes)
             c.execute('UPDATE analyses SET content=?,updated=? WHERE recording_id=?',(json.dumps(data,ensure_ascii=False),time.time(),key))
+
+    def queue_speakers(self,key):
+        if not self.detail(key):raise ValueError('not found')
+        with self.connect() as c:
+            c.execute("INSERT INTO diarizations(recording_id,state,updated) VALUES(?,'QUEUED',?) ON CONFLICT(recording_id) DO UPDATE SET state='QUEUED',error=NULL,updated=excluded.updated WHERE diarizations.state IN ('FAILED','NOT_REQUESTED')",(key,time.time()))
+    def claim_speakers(self):
+        with self.connect() as c:
+            c.execute('BEGIN IMMEDIATE')
+            row=c.execute("SELECT d.recording_id FROM diarizations d JOIN transcripts t ON t.recording_id=d.recording_id WHERE d.state='QUEUED' ORDER BY d.updated LIMIT 1").fetchone()
+            if row:
+                c.execute("UPDATE diarizations SET state='RUNNING',updated=? WHERE recording_id=?",(time.time(),row[0]))
+                return row[0]
+    def save_speakers(self,key,data):
+        with self.connect() as c:
+            c.execute("INSERT OR REPLACE INTO diarizations VALUES(?,'DONE',?,NULL,?)",(key,json.dumps(data,ensure_ascii=False),time.time()))
+    def fail_speakers(self,key,error):
+        with self.connect() as c:
+            c.execute("UPDATE diarizations SET state='FAILED',error=?,updated=? WHERE recording_id=?",(error,time.time(),key))

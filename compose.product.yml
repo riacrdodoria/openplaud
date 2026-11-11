@@ -25,6 +25,9 @@ services:
     env_file: ./state/product.env
     environment:
       OPENPLAUD_DATA: /state
+      OPENPLAUD_DIARIZATION_ENABLED: "1"
+      OPENPLAUD_OLLAMA_URL: http://ollama:11434
+      OPENPLAUD_LLM_MODEL: qwen2.5:1.5b
       OPENPLAUD_ALLOWED_HOSTS: "${OPENPLAUD_ALLOWED_HOSTS:-127.0.0.1,localhost}"
       OPENPLAUD_HTTPS_HOSTS: "${OPENPLAUD_HTTPS_HOSTS:-}"
     networks: [private, oauth]
@@ -43,9 +46,11 @@ services:
     environment:
       OPENPLAUD_OLLAMA_URL: http://ollama:11434
       OPENPLAUD_LLM_MODEL: qwen2.5:1.5b
+      OPENPLAUD_DIARIZATION_MODELS: /diarization
     volumes:
       - ./state/product:/state
       - ./state/models/whisper-small:/models:ro
+      - ./state/models/diarization:/diarization:ro
       - ./state/inbox:/inbox:ro
     mem_limit: 2g
     cpus: 2.0

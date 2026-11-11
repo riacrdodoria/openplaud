@@ -43,6 +43,7 @@ def process(library,job,provider,language='auto'):
         segments=library.detail(job['id'])['transcript']['segments']
     from .llm import summarize
     library.save_analysis(job['id'],summarize(segments))
+    if os.environ.get('OPENPLAUD_DIARIZATION_MODELS'):library.queue_speakers(job['id'])
 
 
 def child(root,job,model,language):
@@ -116,6 +117,17 @@ def main():
                     if proc.is_alive():proc.kill();proc.join()
                 status=library.detail(job['id'])['status']
                 if status in ('TRANSCRIBING','ANALYZING'):library.fail(job['id'],'WORKER_TIMEOUT_OR_CRASH')
+            if not job and os.environ.get('OPENPLAUD_DIARIZATION_MODELS'):
+                speaker_key=library.claim_speakers()
+                if speaker_key:
+                    from .diarization import child as speaker_child
+                    proc=multiprocessing.get_context('spawn').Process(target=speaker_child,args=(a.root,speaker_key,os.environ['OPENPLAUD_DIARIZATION_MODELS']))
+                    proc.start()
+                    try:proc.join(600)
+                    finally:
+                        if proc.is_alive():proc.terminate();proc.join(5)
+                        if proc.is_alive():proc.kill();proc.join()
+                    if library.detail(speaker_key)['diarization']['state']=='RUNNING':library.fail_speakers(speaker_key,'DIARIZATION_TIMEOUT_OR_CRASH')
             if a.once:break
             time.sleep(2 if job else 5)
 

@@ -30,6 +30,7 @@ class CalendarReview(BaseModel):
 class Question(BaseModel):
     question:str=Field(min_length=1,max_length=1000)
     recording_ids:list[str]|None=Field(default=None,max_length=100)
+    history:list[str]=Field(default_factory=list,max_length=4)
 
 async def bounded_body(request,maximum):
     chunks=[];size=0
@@ -157,15 +158,22 @@ def create_app(root,token):
         def clock(ms):
             seconds,milli=divmod(ms,1000);minutes,sec=divmod(seconds,60);hours,minute=divmod(minutes,60)
             return f'{hours:02}:{minute:02}:{sec:02}.{milli:03}'
-        if format=='vtt':content='WEBVTT\n\n'+'\n\n'.join(f"{clock(s['start_ms'])} --> {clock(s['end_ms'])}\n{s['text'].replace('-->','→')}" for s in segments)
-        else:content=r['name']+'\n\n'+(r['analysis'] or {}).get('summary','')+'\n\n'+'\n'.join(f"[{clock(s['start_ms'])}] {s['text']}" for s in segments)
+        if format=='vtt':content='WEBVTT\n\n'+'\n\n'.join(f"{clock(s['start_ms'])} --> {clock(s['end_ms'])}\n{(s.get('speaker','') or '')+' · ' if s.get('speaker') else ''}{s['text'].replace('-->','→')}" for s in segments)
+        else:content=r['name']+'\n\n'+(r['analysis'] or {}).get('summary','')+'\n\n'+'\n'.join(f"[{clock(s['start_ms'])}] {(s.get('speaker')+' · ') if s.get('speaker') else ''}{s['text']}" for s in segments)
         return PlainTextResponse(content,headers={'Content-Disposition':f'attachment; filename="openplaud.{format}"'})
+    @app.post('/api/recordings/{key}/speakers',dependencies=[Depends(auth)])
+    def speakers(key:str):
+        detail(key)
+        if not os.environ.get('OPENPLAUD_DIARIZATION_ENABLED'):raise HTTPException(409,'Speaker separation is not configured')
+        library.queue_speakers(key)
+        return detail(key)
     @app.post('/api/chat',dependencies=[Depends(auth)])
     def chat(data:Question):
         if data.recording_ids is not None:
             for key in data.recording_ids:detail(key)
-        from .analysis import answer
-        return answer(library,data.question,data.recording_ids)
+        if any(len(q)>1000 for q in data.history):raise HTTPException(422,'History question too long')
+        from .chat import answer
+        return answer(library,data.question,data.recording_ids,data.history)
     @app.get('/api/calendar/google',dependencies=[Depends(auth)])
     def google_status():return {'configured':google.configured(),'connections':google.connections()}
     @app.post('/api/calendar/google/connect',dependencies=[Depends(auth)])

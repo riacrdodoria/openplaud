@@ -43,3 +43,11 @@ Diarização/biometria de voz, localização Android, integrações CRM, embeddi
 - Disco na verificação final: cerca de 131 GiB livres, 68% ocupado; o bloqueio de capacidade inicial não persistia nessa medição. Não foi feita limpeza de dados existentes por esta implementação.
 
 Ainda não há autorização Google real, validação no telefone, QA visual de navegador ou teste de reboot do host. Esses resultados não são inferidos dos testes HTTP ou de mocks.
+
+## Atualização posterior — Google Recorder, falantes e chat (10/11/2026)
+
+As declarações históricas acima sobre ausência de autorização Google e uso de gravações reais descrevem a entrega inicial. Posteriormente a sessão Google Recorder foi autenticada, três áudios reais foram importados e concluídos; uma quarta gravação nova do Pixel foi detectada e concluída. Timer de cinco minutos habilitado. Google Calendar OAuth continua sem validação real.
+
+O resumo da quarta gravação foi confrontado com seus dois segmentos de transcrição: cobre os dois assuntos, sem decisões, responsáveis, prazos ou tarefas inventados. O nome do produto foi transcrito incorretamente e esse erro propagou ao resumo. Não foi uma avaliação por escuta humana nem prova de qualidade para reuniões longas.
+
+Diarização local e chat entre gravações têm seus limites, configuração e rollback em SPEAKERS_CHAT_OPERATIONS.md. Não equivalem a identificação biométrica, busca semântica longitudinal ou paridade completa com Plaud. O domínio público ainda depende do registro DNS, conforme DOMAIN_DEPLOYMENT.md.

@@ -67,3 +67,20 @@ class MVPAPITests(unittest.TestCase):
             yield b'"}'
         r=self.client.post('/api/chat',headers=self.header,content=stream())
         self.assertEqual(r.status_code,413)
+
+    def test_speaker_queue_auth_export_and_preserved_analysis(self):
+        key=self.upload();process(self.lib,self.lib.claim(),Provider())
+        path='/api/recordings/'+key+'/speakers'
+        self.assertEqual(self.client.post(path).status_code,401)
+        self.assertEqual(self.client.post(path,headers=self.header).status_code,409)
+        with patch.dict('os.environ',{'OPENPLAUD_DIARIZATION_ENABLED':'1'}):
+            self.assertEqual(self.client.post(path,headers=self.header).json()['diarization']['state'],'QUEUED')
+        original=self.lib.detail(key)['analysis']
+        self.lib.save_speakers(key,{'turns':[{'start_ms':0,'end_ms':2500,'speaker':'Falante 1'}],'speaker_count':1})
+        self.assertEqual(self.lib.detail(key)['analysis'],original)
+        self.assertIn('Falante 1',self.client.get('/api/recordings/'+key+'/export?format=vtt',headers=self.header).text)
+        with patch.dict('os.environ',{'OPENPLAUD_OLLAMA_URL':'http://ollama:11434'}),patch('openplaud.chat.generate',return_value={'claims':[{'text':'Orçamento aprovado.','source_ids':[0]}]}):
+            response=self.client.post('/api/chat',headers=self.header,json={'question':'orçamento','recording_ids':[key],'history':['O que foi discutido?']})
+        self.assertEqual(response.status_code,200)
+        self.assertEqual(response.json()['method'],'local-grounded-chat-v1')
+        self.assertEqual(response.json()['citations'][0]['speaker'],'Falante 1')
