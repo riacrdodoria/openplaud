@@ -52,3 +52,5 @@ A análise local é limitada a oito blocos e oito minutos de geração por grava
 OAuth real depende de credenciais e autorização do titular da agenda; nenhum acesso foi simulado como conectado. Pixel/Syncthing precisa de validação no aparelho. Diarização, reconhecimento de vozes, localização Android, integrações CRM, embeddings e chat generativo não fazem parte desta entrega. O manifesto permite modo standalone em contexto seguro; instalação PWA/HTTPS e QA visual mobile ainda precisam ser validados. Nenhum áudio privado é colocado em cache offline.
 
 Veja [critérios e evidências](docs/MVP_ACCEPTANCE.md), [arquitetura](docs/ARCHITECTURE.md), [referências e licenças](docs/OPEN_SOURCE_REVIEW.md). A infraestrutura de controle de desenvolvimento anterior é histórica e não é necessária para usar o produto.
+
+Login por usuário e senha compatível com Sonhos: configuração e limites em [docs/SHARED_LOGIN.md](docs/SHARED_LOGIN.md). O conector continua usando sua chave técnica independente.

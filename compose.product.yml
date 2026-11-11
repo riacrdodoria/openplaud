@@ -25,6 +25,7 @@ services:
     env_file: ./state/product.env
     environment:
       OPENPLAUD_DATA: /state
+      OPENPLAUD_LOGIN_FILE: "${OPENPLAUD_LOGIN_FILE:-}"
       OPENPLAUD_DIARIZATION_ENABLED: "1"
       OPENPLAUD_OLLAMA_URL: http://ollama:11434
       OPENPLAUD_LLM_MODEL: qwen2.5:1.5b

@@ -43,6 +43,8 @@ async def bounded_body(request,maximum):
 def create_app(root,token):
     if len(token)<32:raise ValueError('token must contain at least 32 characters')
     library=Library(root);sessions={}
+    from .login import PasswordLogin,LoginBusy
+    password_login=PasswordLogin(os.environ.get('OPENPLAUD_LOGIN_FILE'))
     from .google_calendar import GoogleCalendar
     google=GoogleCalendar(library)
     app=FastAPI(docs_url=None,redoc_url=None,openapi_url=None)
@@ -93,7 +95,10 @@ def create_app(root,token):
     def health():return {'status':'ok','service':'openplaud'}
     @app.post('/api/session')
     def login(request:Request,response:Response,authorization:str=Header(default='')):
-        if not authorized(authorization):raise HTTPException(401,'Unauthorized')
+        if not authorized(authorization):
+            try:valid=password_login.verify(authorization,request.client.host if request.client else 'unknown')
+            except LoginBusy:raise HTTPException(429,'Too many login attempts; wait five minutes',headers={'Retry-After':'300'})
+            if not valid:raise HTTPException(401,'Unauthorized')
         for k,v in list(sessions.items()):
             if v<time.time():sessions.pop(k,None)
         if len(sessions)>=64:raise HTTPException(429,'Session limit')
